@@ -1,0 +1,30 @@
+{
+  "name": "ai-commit-cli",
+  "version": "0.1.0",
+  "description": "AI-generated git commit messages from your staged diff. Runs via a free Gemini API key or a fully local Ollama model — no backend, no server, no cost to run at any scale.",
+  "bin": {
+    "ai-commit": "./bin/ai-commit.js"
+  },
+  "main": "src/cli.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "keywords": [
+    "git",
+    "commit",
+    "ai",
+    "cli",
+    "gemini",
+    "ollama",
+    "conventional-commits",
+    "vscode",
+    "cursor"
+  ],
+  "license": "MIT",
+  "author": ""
+}

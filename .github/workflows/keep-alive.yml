@@ -1,0 +1,29 @@
+name: Keep Render server awake
+
+# Render's free tier spins a service down after ~15 minutes of no
+# incoming requests, and the next request pays a slow "cold start".
+# Pinging /health slightly under that window keeps it warm.
+#
+# Setup:
+#   1. Deploy /server to Render (see render.yaml or the README).
+#   2. In this repo: Settings -> Secrets and variables -> Actions
+#      -> New repository secret -> name it RENDER_HEALTH_URL,
+#      value e.g. https://ai-commit-server.onrender.com/health
+#   3. Done - this workflow runs automatically on the schedule below.
+
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          if [ -z "${{ secrets.RENDER_HEALTH_URL }}" ]; then
+            echo "RENDER_HEALTH_URL secret is not set yet - skipping ping."
+            exit 0
+          fi
+          curl -sf "${{ secrets.RENDER_HEALTH_URL }}" || echo "Ping failed (server may be cold-starting, this is normal for the first ping after a long idle period)."

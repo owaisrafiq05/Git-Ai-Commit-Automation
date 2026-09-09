@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: ai-commit-server
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CLIENT_SECRET
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
