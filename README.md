@@ -72,7 +72,7 @@ npm publish   # check the package name is available on npmjs.com first
 
 ## The server (`/server`) — optional, and **not** where the AI model runs
 
-⚠️ **Important, based on what we found researching the tavernari model your friend shared:** even its smallest variant needs ~5GB of RAM/disk (two ~2.5GB models). Render's free tier gives you 512MB RAM and 0.1 CPU — an LLM will not fit there, full stop. That's not a config problem, it's a hardware ceiling.
+⚠️ **Important, based on what we found researching the tavernari model you shared:** even its smallest variant needs ~5GB of RAM/disk (two ~2.5GB models). Render's free tier gives you 512MB RAM and 0.1 CPU — an LLM will not fit there, full stop. That's not a config problem, it's a hardware ceiling.
 
 So `/server` is **not** an Ollama host. It's a tiny proxy with **no AI logic of its own** — it just forwards a prompt to Gemini's API using a server-side key, so that key never has to be embedded in the public npm package (where anyone could extract it and rack up usage on your account). It's a few KB of code with zero dependencies, which is exactly the kind of thing Render's free tier is built for.
 
@@ -105,19 +105,6 @@ Render's free tier sleeps a service after ~15 min idle; the next request pays a 
    - Name: `RENDER_HEALTH_URL`
    - Value: `https://ai-commit-server.onrender.com/health`
 2. That's it — `.github/workflows/keep-alive.yml` runs automatically on schedule, completely free (GitHub Actions gives generous free minutes for public/private repos).
-
-## Pushing this to your existing repo
-
-You already created `owaisrafiq05/Git-Ai-Commit-Automation` on GitHub. From this folder:
-
-```bash
-git init
-git add .
-git commit -m "chore: initial scaffold - CLI, hosted proxy server, keep-alive workflow"
-git branch -M main
-git remote add origin https://github.com/owaisrafiq05/Git-Ai-Commit-Automation.git
-git push -u origin main
-```
 
 ## Roadmap
 
