@@ -119,8 +119,8 @@ ${color('ai-commit', 'bold')} — AI-generated git commit messages from your sta
 
 Usage:
   ai-commit           Generate a commit message for staged changes and commit
-  ai-commit config     (Re)run the setup wizard to choose/change your provider
-  ai-commit --help     Show this help
+  ai-commit config    (Re)run the setup wizard to choose/change your provider
+  ai-commit --help    Show this help
 
 Providers:
   gemini   Uses a free Gemini API key you provide (aistudio.google.com/apikey)
