@@ -1,12 +1,13 @@
 services:
   - type: web
     name: ai-commit-server
-    env: node
+    env: docker
     plan: free
     rootDir: server
-    buildCommand: npm install
-    startCommand: npm start
+    dockerfilePath: ./Dockerfile
     envVars:
+      - key: BACKEND
+        value: gemini
       - key: GEMINI_API_KEY
         sync: false
       - key: CLIENT_SECRET

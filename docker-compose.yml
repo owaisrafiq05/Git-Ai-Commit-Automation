@@ -1,0 +1,39 @@
+# Runs the proxy server AND a real Ollama model together on ONE host.
+#
+# This is what actually needs a real VM with real RAM - a VM like
+# Oracle's Always Free Ampere tier (up to 24GB RAM), NOT Render's free
+# tier (512MB, won't fit any model). Point your CLI's "hosted" provider
+# at this host's IP/domain once it's running.
+#
+# Usage on the VM:
+#   docker compose up -d
+#   docker compose exec ollama ollama pull qwen2.5-coder:3b
+#
+# Then test:
+#   curl http://localhost:3000/health
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    environment:
+      BACKEND: ollama
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: qwen2.5-coder:3b
+      CLIENT_SECRET: ${CLIENT_SECRET:-}
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
+volumes:
+  ollama_data:

@@ -1,33 +1,23 @@
 // ai-commit-server
 //
-// Runs in one of two modes, controlled by BACKEND:
+// A deliberately tiny proxy: it forwards commit-message requests to
+// Gemini using a server-side API key, so that key never has to live
+// inside the distributed npm package. No framework, no dependencies -
+// keeps this comfortably inside Render's free tier (512MB RAM), since
+// it's just forwarding small HTTP requests, not running any model.
 //
-//   BACKEND=gemini (default) - deliberately tiny proxy, forwards to
-//     Gemini using a server-side key so it never has to live inside the
-//     distributed npm package. No dependencies, ~10MB RAM - fits
-//     Render's free tier (512MB) easily.
-//
-//   BACKEND=ollama - talks to a real Ollama instance (OLLAMA_HOST) that
-//     has an actual model loaded. Use this ONLY on a host with enough
-//     RAM for the model (several GB) - e.g. a real VM like Oracle's
-//     Always Free Ampere tier, NOT Render's free tier. Pairs with the
-//     docker-compose.yml at the repo root, which runs this container
-//     alongside an Ollama container on the same host.
+// This is NOT where you should run Ollama / any local LLM - those need
+// multiple GB of RAM that the free tier doesn't have. This server only
+// proxies to Gemini's cloud API.
 
 const http = require('http');
 
 const PORT = process.env.PORT || 3000;
-const BACKEND = process.env.BACKEND || 'gemini';
-
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-
-const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5-coder:3b';
-
 // Optional shared secret so randoms who find the URL can't burn your
-// Gemini free-tier quota or your VM's compute. Set this in the host's
-// env vars and give the same value to your CLI users via `ai-commit config`.
+// Gemini free-tier quota. Set this in Render's env vars and give the
+// same value to your CLI users via `ai-commit config`.
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 function send(res, status, body) {
@@ -74,45 +64,19 @@ async function callGemini(prompt) {
   return text.trim();
 }
 
-async function callOllama(prompt) {
-  const res = await fetch(`${OLLAMA_HOST}/api/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: OLLAMA_MODEL,
-      prompt,
-      stream: false,
-      options: { temperature: 0.4 },
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`Ollama error (${res.status}): ${errText || res.statusText}`);
-  }
-
-  const data = await res.json();
-  const text = (data.response || '').trim();
-  if (!text) throw new Error('Ollama returned an empty response.');
-  return text;
-}
-
-async function generate(prompt) {
-  if (BACKEND === 'ollama') return callOllama(prompt);
-  if (!GEMINI_API_KEY) throw new Error('Server misconfigured: GEMINI_API_KEY not set');
-  return callGemini(prompt);
-}
-
 const server = http.createServer(async (req, res) => {
   // Used by the GitHub Actions keep-alive workflow to prevent Render's
   // free tier from spinning the service down after 15 min idle.
   if (req.method === 'GET' && req.url === '/health') {
-    return send(res, 200, { status: 'ok', backend: BACKEND, time: new Date().toISOString() });
+    return send(res, 200, { status: 'ok', time: new Date().toISOString() });
   }
 
   if (req.method === 'POST' && req.url === '/generate-commit-message') {
     if (CLIENT_SECRET && req.headers['x-client-secret'] !== CLIENT_SECRET) {
       return send(res, 401, { error: 'Unauthorized' });
+    }
+    if (!GEMINI_API_KEY) {
+      return send(res, 500, { error: 'Server misconfigured: GEMINI_API_KEY not set' });
     }
 
     try {
@@ -121,7 +85,7 @@ const server = http.createServer(async (req, res) => {
       if (!prompt || typeof prompt !== 'string') {
         return send(res, 400, { error: 'Missing "prompt" string in request body' });
       }
-      const message = await generate(prompt);
+      const message = await callGemini(prompt);
       return send(res, 200, { message });
     } catch (err) {
       return send(res, 502, { error: err.message || 'Upstream error' });
@@ -132,5 +96,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`ai-commit-server listening on port ${PORT} (backend: ${BACKEND})`);
+  console.log(`ai-commit-server listening on port ${PORT}`);
 });
