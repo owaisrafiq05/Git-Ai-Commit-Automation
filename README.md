@@ -3,7 +3,7 @@
 AI-generated git commit messages from your staged diff. Works from any terminal — VS Code, Cursor, Claude Code, or plain shell — with **zero required backend and zero cost to run**, no matter how many people install it.
 
 ```
-git add .
+git add .   /
 ai-commit
 ```
 
@@ -36,7 +36,6 @@ Only the diff is sent, never the full repo, so even small models handle it fine.
 
 | Provider | What it needs | Who pays for inference |
 |---|---|---|
-| **Gemini** (default, recommended) | User's own free API key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | The user, within Google's free tier — $0 for you at any scale |
 | **Ollama** | Ollama installed locally + a pulled model | Nobody — runs on the user's own machine |
 | **Hosted** | A server URL (e.g. your Render deployment) | You, if you choose to run `/server` |
 
