@@ -36,20 +36,23 @@ async function main(argv) {
     return;
   }
 
+  // Brand every commit run — logo, credits, star CTA.
+  printBanner();
+
   if (!isGitRepo()) {
-    console.log(color('Not inside a git repository.', 'red'));
+    console.log(color('  ✖  Not inside a git repository.\n', 'red'));
     process.exit(1);
   }
 
   if (!hasStagedChanges()) {
-    console.log(color('No staged changes found. Stage something first with "git add".', 'yellow'));
+    console.log(color('  ✖  No staged changes found. Stage something first with "git add".\n', 'yellow'));
     process.exit(1);
   }
 
   let config = loadConfig();
   if (!config || config.provider !== 'hosted') {
     // First run (or old gemini/ollama config): auto-configure hosted, no prompts.
-    config = await runSetupWizard();
+    config = await runSetupWizard({ skipBanner: true });
   }
 
   let message;
@@ -57,18 +60,20 @@ async function main(argv) {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      console.log(color('\n🤖 Generating commit message...', 'dim'));
+      console.log(color('  ⚙  Generating commit message with Git AI Commit...\n', 'dim'));
       message = await generateMessage(config);
     } catch (err) {
-      console.log(color(`\n✖ ${err.message}`, 'red'));
+      console.log(color(`  ✖  ${err.message}\n`, 'red'));
       process.exit(1);
     }
 
-    console.log(color('\nSuggested commit message:\n', 'bold'));
-    console.log(color(`  ${message.split('\n').join('\n  ')}`, 'green'));
+    console.log(color('  Suggested commit message:', 'bold'));
+    console.log();
+    console.log(color(`    ${message.split('\n').join('\n    ')}`, 'green'));
+    console.log();
 
     const choice = await ask(
-      color('\n[Enter] use it   [r] regenerate   [e] edit   [c] cancel\n> ', 'dim')
+      color('  [Enter] use it   [r] regenerate   [e] edit   [c] cancel\n  > ', 'dim')
     );
 
     if (choice === '') {
@@ -76,29 +81,29 @@ async function main(argv) {
     } else if (choice.toLowerCase() === 'r') {
       continue;
     } else if (choice.toLowerCase() === 'e') {
-      const edited = await ask(color('Edit message: ', 'cyan'));
+      const edited = await ask(color('  Edit message: ', 'cyan'));
       if (edited.trim()) message = edited.trim();
       break;
     } else if (choice.toLowerCase() === 'c') {
-      console.log(color('Cancelled.', 'yellow'));
+      console.log(color('\n  Cancelled.\n', 'yellow'));
       process.exit(0);
     } else {
-      console.log(color('Unrecognized option, try again.', 'red'));
+      console.log(color('  Unrecognized option, try again.', 'red'));
     }
   }
 
   const ok = commit(message);
   if (ok) {
-    console.log(color('\n✅ Committed!\n', 'green'));
+    console.log(color('\n  ✅  Committed with Git AI Commit.\n', 'green'));
   } else {
-    console.log(color('\n✖ Commit failed.\n', 'red'));
+    console.log(color('\n  ✖  Commit failed.\n', 'red'));
     process.exit(1);
   }
 }
 
 function printHelp() {
   printBanner();
-  console.log(`${color('ai-commit', 'bold')} — AI-generated git commit messages from your staged diff
+  console.log(`${color('  ai-commit', 'bold')} — AI-generated git commit messages from your staged diff
 
 Usage:
   ai-commit           Generate a commit message for staged changes and commit

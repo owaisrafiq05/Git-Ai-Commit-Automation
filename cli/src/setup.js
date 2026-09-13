@@ -8,14 +8,14 @@ const DEFAULT_HOSTED = {
   clientSecret: '4bfd789a1b3d19a83f888561947beaf510a04778ad8b2b8626d6f36e7940d728',
 };
 
-async function runSetupWizard() {
-  printBanner();
+async function runSetupWizard({ skipBanner = false } = {}) {
+  if (!skipBanner) printBanner();
   const config = {
     provider: 'hosted',
     hosted: { ...DEFAULT_HOSTED },
   };
   saveConfig(config);
-  console.log(color('\n✅ Configured to use hosted AI. Run "ai-commit" with staged changes.\n', 'green'));
+  console.log(color('  ✅  Configured to use hosted AI. Run "ai-commit" with staged changes.\n', 'green'));
   return config;
 }
 
