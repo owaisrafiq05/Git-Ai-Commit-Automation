@@ -1,9 +1,10 @@
 {
-  "name": "ai-commit-cli",
+  "name": "@owaisrafiq05/git-ai-commit",
   "version": "0.1.0",
   "description": "AI-generated git commit messages from your staged diff via a hosted AI server.",
   "bin": {
-    "ai-commit": "./bin/ai-commit.js"
+    "ai-commit": "bin/ai-commit.js",
+    "git-ai-commit": "bin/ai-commit.js"
   },
   "main": "src/cli.js",
   "scripts": {

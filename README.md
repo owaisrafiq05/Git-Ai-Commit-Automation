@@ -1,15 +1,85 @@
 # Git AI Commit Automation
 
-AI-generated git commit messages from your staged diff. Works from any terminal — VS Code, Cursor, Claude Code, or plain shell — with **zero required backend and zero cost to run**, no matter how many people install it.
+**AI-powered git commit messages from your staged diff — one command, zero model downloads on your laptop.**
 
-```
-git add .   /
+[![npm](https://img.shields.io/npm/v/@owaisrafiq05/git-ai-commit.svg)](https://www.npmjs.com/package/@owaisrafiq05/git-ai-commit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
+
+```bash
+git add .
 ai-commit
 ```
 
-```
-🤖 Generating commit message...
+<p align="center">
+  <img src="docs/assets/cli-help-screenshot.png" alt="Git AI Commit CLI — help banner with credits" width="900" />
+</p>
 
+<p align="center">
+  <img src="docs/assets/cli-commit-flow-screenshot.png" alt="Git AI Commit CLI — generating and suggesting a commit message" width="900" />
+</p>
+
+Star this repo if it helps you:  
+**https://github.com/owaisrafiq05/Git-Ai-Commit-Automation**
+
+---
+
+## Why this exists
+
+Writing good commit messages takes time. Local LLMs mean multi‑GB downloads and a background process. Cloud API keys mean rate limits and setup friction.
+
+**Git AI Commit** gives you a tiny CLI that:
+
+1. Reads only your **staged diff** (never your whole repo)
+2. Sends it to a **hosted AI backend** (Ollama on a server you or the maintainers run)
+3. Suggests a conventional commit message
+4. Lets you **accept / regenerate / edit / cancel**
+5. Runs `git commit` for you
+
+No Ollama install on the user’s machine. No 2GB model download. Just Node.js and one command.
+
+---
+
+## Quick start (end users)
+
+### Requirements
+
+- [Node.js](https://nodejs.org/) **18+**
+- A git repository with staged changes
+
+### Install
+
+```bash
+npm install -g @owaisrafiq05/git-ai-commit
+```
+
+If you hit permission errors on macOS/Linux, use a user prefix (recommended):
+
+```bash
+mkdir -p ~/.npm-global
+npm config set prefix ~/.npm-global
+echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+npm install -g @owaisrafiq05/git-ai-commit
+```
+
+Or run without a global install:
+
+```bash
+npx @owaisrafiq05/git-ai-commit
+```
+
+### Use it
+
+```bash
+cd your-project
+git add .
+ai-commit
+```
+
+You’ll see the branded **GIT AI COMMIT** banner, then a suggested message:
+
+```text
 Suggested commit message:
 
   fix: handle empty cart state on checkout
@@ -17,96 +87,240 @@ Suggested commit message:
 [Enter] use it   [r] regenerate   [e] edit   [c] cancel
 ```
 
-## How it's structured
+| Key | Action |
+|-----|--------|
+| **Enter** | Accept and commit |
+| **r** | Regenerate |
+| **e** | Edit the message, then commit |
+| **c** | Cancel |
 
+### Help & version
+
+```bash
+ai-commit --help
+ai-commit --version
+ai-commit config    # reset to hosted defaults
 ```
+
+Config is stored at `~/.ai-commit/config.json`.
+
+---
+
+## How it works
+
+```text
+┌─────────────────────┐         ┌──────────────────────────────┐
+│  Your laptop        │         │  Hosted backend (AWS / VM)   │
+│                     │         │                              │
+│  git add .          │         │  Node proxy  (:3000)         │
+│  ai-commit  ───────►│  HTTP   │       │                      │
+│                     │         │       ▼                      │
+│  review & commit    │◄────────│  Ollama + qwen2.5-coder:3b   │
+└─────────────────────┘         └──────────────────────────────┘
+```
+
+1. **CLI** (`cli/`) — the npm product users install  
+2. **Server** (`server/`) — thin HTTP API that talks to Ollama (or optionally Gemini)  
+3. **Docker Compose** — runs proxy + Ollama together on a VM with enough RAM  
+
+Only the staged diff is sent. The model stays on the server.
+
+---
+
+## Repository structure
+
+```text
 Git-Ai-Commit-Automation/
-├── cli/      the actual product — an npm CLI, works everywhere
-├── server/   optional thin proxy (for the "hosted" provider), deployable on Render
-└── .github/workflows/keep-alive.yml   pings the proxy every 14 min so Render doesn't sleep it
+├── cli/                 # npm package (@owaisrafiq05/git-ai-commit)
+│   ├── bin/             # ai-commit entrypoint
+│   ├── src/             # CLI logic, banner, hosted client
+│   └── scripts/         # postinstall banner
+├── server/              # HTTP proxy (Ollama / Gemini backends)
+├── docker-compose.yml   # Ollama + server on one host
+├── render.yaml          # optional Render deploy (Gemini proxy mode)
+└── .github/workflows/   # keep-alive ping for free-tier hosts
 ```
 
-## The CLI (`/cli`) — this is the product
+---
 
-Run `git diff --cached` → send it to an AI provider → show a suggested commit message → user accepts / edits / regenerates / cancels → `git commit`.
+## Self-hosting the backend
 
-Only the diff is sent, never the full repo, so even small models handle it fine.
+The public CLI points at a hosted server by default. To run **your own** stack (team / private):
 
-### Three interchangeable providers — user picks on first run
+### Hardware
 
-| Provider | What it needs | Who pays for inference |
-|---|---|---|
-| **Ollama** | Ollama installed locally + a pulled model | Nobody — runs on the user's own machine |
-| **Hosted** | A server URL (e.g. your Render deployment) | You, if you choose to run `/server` |
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| RAM | 4 GB | **8 GB+** |
+| Disk | 20 GB | **30 GB+** |
+| OS | Ubuntu 22.04 / 24.04 | — |
 
-This is the important design decision: **the default path (Gemini, user's own key) costs you nothing whether 10 people or 10 million people install this.** Ollama is the same — the user's machine does the work. Only the "Hosted" option has a bill attached to you, and it's opt-in.
+`qwen2.5-coder:3b` will **not** fit on a 1 GB free-tier micro instance.
 
-### Ollama model options
+### Deploy with Docker Compose
 
-- **Recommended: `tavernari/git-commit-message`** — a two-model pipeline built specifically for this task (`sp_change_mini` summarizes each changed file, `sp_commit_mini` synthesizes the final message). The `mini` variant is ~5GB total on disk (2.5GB × 2 models). [ollama.com/tavernari/git-commit-message](https://ollama.com/tavernari/git-commit-message)
-- **Custom** — any general-purpose coding model, e.g. `qwen2.5-coder:3b` (single-step, ~2GB)
+```bash
+git clone https://github.com/owaisrafiq05/Git-Ai-Commit-Automation.git
+cd Git-Ai-Commit-Automation
 
-### Setup
+echo "CLIENT_SECRET=$(openssl rand -hex 32)" > .env
+cat .env   # save this for your CLI users
+
+docker compose up -d --build
+docker compose exec ollama ollama pull qwen2.5-coder:3b
+
+curl -s http://127.0.0.1:3000/health
+# {"status":"ok","backend":"ollama",...}
+```
+
+Open inbound **TCP 3000** on your firewall / security group.
+
+Point a custom CLI config at your server by editing `~/.ai-commit/config.json`:
+
+```json
+{
+  "provider": "hosted",
+  "hosted": {
+    "host": "http://YOUR_SERVER_IP:3000",
+    "clientSecret": "YOUR_CLIENT_SECRET"
+  }
+}
+```
+
+### Server environment
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `BACKEND` | `ollama` or `gemini` | `ollama` |
+| `OLLAMA_HOST` | Ollama base URL | `http://localhost:11434` |
+| `OLLAMA_MODEL` | Model name | `qwen2.5-coder:3b` |
+| `CLIENT_SECRET` | Shared secret for `/generate-commit-message` | (empty = open) |
+| `PORT` | HTTP port | `3000` |
+| `GEMINI_API_KEY` | Only if `BACKEND=gemini` | — |
+
+### API
+
+```http
+GET  /health
+POST /generate-commit-message
+     Header: X-Client-Secret: <secret>
+     Body:   { "prompt": "..." }
+     →       { "message": "fix: ..." }
+```
+
+---
+
+## Local development (CLI)
+
+```bash
+git clone https://github.com/owaisrafiq05/Git-Ai-Commit-Automation.git
+cd Git-Ai-Commit-Automation/cli
+node bin/ai-commit.js --help
+
+# optional: link for local global command
+npm link
+```
+
+---
+
+## Publishing the CLI (maintainers)
+
+Package name: **`@owaisrafiq05/git-ai-commit`**
 
 ```bash
 cd cli
-npm link          # makes `ai-commit` available globally for local testing
+npm login
+npm publish --access public
 ```
 
-Then in any git repo:
+Bump versions with:
 
 ```bash
-git add .
-ai-commit
+npm version patch
+npm publish --access public
 ```
 
-First run walks you through picking a provider. Reconfigure anytime with `ai-commit config`. Config lives at `~/.ai-commit/config.json`.
+---
 
-### Publishing (so `npx ai-commit` works for everyone)
+## Features
 
-```bash
-cd cli
-npm publish   # check the package name is available on npmjs.com first
-```
+- One-command commit message generation from staged diffs  
+- Interactive accept / regenerate / edit / cancel flow  
+- Hosted AI by default — no local model required for users  
+- Branded CLI banner with project credits  
+- Self-hostable with Docker Compose + Ollama  
+- Optional Gemini backend for lightweight proxy-only hosts  
+- MIT licensed and open source  
 
-## The server (`/server`) — optional, and **not** where the AI model runs
-
-⚠️ **Important, based on what we found researching the tavernari model you shared:** even its smallest variant needs ~5GB of RAM/disk (two ~2.5GB models). Render's free tier gives you 512MB RAM and 0.1 CPU — an LLM will not fit there, full stop. That's not a config problem, it's a hardware ceiling.
-
-So `/server` is **not** an Ollama host. It's a tiny proxy with **no AI logic of its own** — it just forwards a prompt to Gemini's API using a server-side key, so that key never has to be embedded in the public npm package (where anyone could extract it and rack up usage on your account). It's a few KB of code with zero dependencies, which is exactly the kind of thing Render's free tier is built for.
-
-```
-CLI (provider: "hosted")
-        │
-        ▼
-  Render proxy  ──────►  Gemini API (your server-side key)
-        │
-        ▼
-  commit message back to CLI
-```
-
-Use this if you want a shared/team setup where individual users don't need their own Gemini key. **Caveat to be upfront about:** this makes you responsible for Gemini's free-tier rate limits across everyone who uses it — fine for a small team, not something to point a public launch at without a real API key/billing strategy.
-
-### Deploying to Render
-
-1. Push this repo to GitHub (see below).
-2. On [render.com](https://render.com): New → Blueprint → connect this repo. It'll read `render.yaml` and auto-configure the `server/` service on the free tier.
-3. Set the environment variables it asks for:
-   - `GEMINI_API_KEY` — your own key
-   - `CLIENT_SECRET` — any random string, so strangers can't hit your endpoint and burn your quota (users configure this same string in the CLI's `ai-commit config`)
-4. Once deployed, copy the service URL (e.g. `https://ai-commit-server.onrender.com`).
-
-### Keeping it awake (your 15-minute idea — this is the right way to do it)
-
-Render's free tier sleeps a service after ~15 min idle; the next request pays a slow cold start. Rather than a paid uptime service, this repo uses a **free GitHub Actions cron job** to ping `/health` every 14 minutes:
-
-1. In GitHub: repo **Settings → Secrets and variables → Actions → New repository secret**
-   - Name: `RENDER_HEALTH_URL`
-   - Value: `https://ai-commit-server.onrender.com/health`
-2. That's it — `.github/workflows/keep-alive.yml` runs automatically on schedule, completely free (GitHub Actions gives generous free minutes for public/private repos).
+---
 
 ## Roadmap
 
-- [ ] VS Code / Cursor extension — thin wrapper around the same CLI logic, shown in the editor UI instead of the terminal
-- [ ] `npm publish` the CLI so `npx ai-commit` works with zero install
-- [ ] Benchmark tavernari-mini vs qwen2.5-coder vs Gemini on ~50 real diffs before picking a hard default
+- [ ] VS Code / Cursor extension wrapping the same CLI flow  
+- [ ] HTTPS + domain in front of the hosted API  
+- [ ] Rate limiting and abuse controls for the public endpoint  
+- [ ] Benchmark smaller models for lower-cost VMs  
+- [ ] Multi-language commit message preference  
+
+---
+
+## Contributing
+
+Contributions are welcome.
+
+1. Fork the repo  
+2. Create a branch: `git checkout -b feature/your-idea`  
+3. Commit your changes (feel free to use `ai-commit` itself)  
+4. Open a pull request with a clear description  
+
+Please keep PRs focused and match the existing code style.
+
+---
+
+## Security notes
+
+- The CLI sends **staged diffs only** — avoid staging secrets (`.env`, keys, tokens).  
+- Protect public backends with `CLIENT_SECRET` and firewall rules.  
+- Self-host if you need diffs to stay inside your network.  
+
+---
+
+## Authors & credits
+
+Built and maintained with care by:
+
+| | |
+|--|--|
+| **Owais Rafiq** | [@owaisrafiq05](https://github.com/owaisrafiq05) |
+| **Aliza Khan** | [@AlizaKhan3](https://github.com/AlizaKhan3) |
+
+If this project saves you time, please **star the repository** — it helps others find it:
+
+**https://github.com/owaisrafiq05/Git-Ai-Commit-Automation**
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+```text
+Copyright (c) 2026 Owais Rafiq, Aliza Khan
+```
+
+---
+
+## Links
+
+- **GitHub:** https://github.com/owaisrafiq05/Git-Ai-Commit-Automation  
+- **npm:** https://www.npmjs.com/package/@owaisrafiq05/git-ai-commit  
+- **Issues:** https://github.com/owaisrafiq05/Git-Ai-Commit-Automation/issues  
+
+---
+
+<p align="center">
+  <b>Git AI Commit</b> — stage your changes, get a great commit message, ship faster.
+  <br />
+  Developed by Owais Rafiq (<a href="https://github.com/owaisrafiq05">owaisrafiq05</a>)
+  &amp; Aliza Khan (<a href="https://github.com/AlizaKhan3">AlizaKhan3</a>)
+</p>
