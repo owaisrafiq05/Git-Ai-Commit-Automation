@@ -6,12 +6,16 @@
     "ai-commit": "./bin/ai-commit.js"
   },
   "main": "src/cli.js",
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
   "engines": {
     "node": ">=18"
   },
   "files": [
     "bin",
     "src",
+    "scripts",
     "README.md"
   ],
   "keywords": [
@@ -24,5 +28,17 @@
     "cursor"
   ],
   "license": "MIT",
-  "author": ""
+  "author": "Owais Rafiq <owaisrafiq05>",
+  "contributors": [
+    "Owais Rafiq (owaisrafiq05)",
+    "Aliza Khan (AlizaKhan3)"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/owaisrafiq05/Git-Ai-Commit-Automation.git"
+  },
+  "homepage": "https://github.com/owaisrafiq05/Git-Ai-Commit-Automation#readme",
+  "bugs": {
+    "url": "https://github.com/owaisrafiq05/Git-Ai-Commit-Automation/issues"
+  }
 }

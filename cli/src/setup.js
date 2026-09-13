@@ -1,5 +1,6 @@
 const { saveConfig } = require('./config');
 const { color } = require('./ui');
+const { printBanner } = require('./banner');
 
 // Baked-in hosted defaults so npm users never need to pick a provider.
 const DEFAULT_HOSTED = {
@@ -8,6 +9,7 @@ const DEFAULT_HOSTED = {
 };
 
 async function runSetupWizard() {
+  printBanner();
   const config = {
     provider: 'hosted',
     hosted: { ...DEFAULT_HOSTED },

@@ -3,6 +3,7 @@ const { runSetupWizard, DEFAULT_HOSTED } = require('./setup');
 const { isGitRepo, getStagedDiff, getStagedFiles, hasStagedChanges, commit } = require('./git');
 const { buildPrompt } = require('./prompt');
 const { ask, color } = require('./ui');
+const { printBanner } = require('./banner');
 const hosted = require('./providers/hosted');
 
 async function generateMessage(config) {
@@ -24,8 +25,14 @@ async function main(argv) {
     return;
   }
 
-  if (args[0] === '--help' || args[0] === '-h') {
+  if (args[0] === '--help' || args[0] === '-h' || args[0] === 'help') {
     printHelp();
+    return;
+  }
+
+  if (args[0] === '--version' || args[0] === '-v' || args[0] === 'version') {
+    printBanner();
+    console.log(color('  ai-commit  v0.1.0\n', 'bold'));
     return;
   }
 
@@ -90,13 +97,14 @@ async function main(argv) {
 }
 
 function printHelp() {
-  console.log(`
-${color('ai-commit', 'bold')} — AI-generated git commit messages from your staged diff
+  printBanner();
+  console.log(`${color('ai-commit', 'bold')} — AI-generated git commit messages from your staged diff
 
 Usage:
   ai-commit           Generate a commit message for staged changes and commit
   ai-commit config    Reset config to the hosted server defaults
   ai-commit --help    Show this help
+  ai-commit --version Show version and credits
 
 Uses the hosted AI server by default. Config is stored at ~/.ai-commit/config.json
 `);
