@@ -2,22 +2,38 @@
 //
 // Runs in one of two modes, controlled by BACKEND:
 //
-//   BACKEND=gemini (default) - deliberately tiny proxy, forwards to
-//     Gemini using a server-side key so it never has to live inside the
-//     distributed npm package. No dependencies, ~10MB RAM - fits
-//     Render's free tier (512MB) easily.
+//   BACKEND=ollama (default) - talks to a real Ollama instance (OLLAMA_HOST)
+//     that has an actual model loaded. Use this on a host with enough
+//     RAM for the model (several GB) - e.g. an EC2 / Oracle VM. Pairs
+//     with the docker-compose.yml at the repo root.
 //
-//   BACKEND=ollama - talks to a real Ollama instance (OLLAMA_HOST) that
-//     has an actual model loaded. Use this ONLY on a host with enough
-//     RAM for the model (several GB) - e.g. a real VM like Oracle's
-//     Always Free Ampere tier, NOT Render's free tier. Pairs with the
-//     docker-compose.yml at the repo root, which runs this container
-//     alongside an Ollama container on the same host.
+//   BACKEND=gemini - tiny proxy, forwards to Gemini using a server-side
+//     key. No dependencies, ~10MB RAM - fits Render's free tier.
 
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+// Load server/.env if present (no dotenv dependency).
+try {
+  const envPath = path.join(__dirname, '.env');
+  if (fs.existsSync(envPath)) {
+    for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      const val = trimmed.slice(eq + 1).trim();
+      if (key && process.env[key] === undefined) process.env[key] = val;
+    }
+  }
+} catch (_) {
+  // ignore
+}
 
 const PORT = process.env.PORT || 3000;
-const BACKEND = process.env.BACKEND || 'gemini';
+const BACKEND = process.env.BACKEND || 'ollama';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
